@@ -1,0 +1,93 @@
+---
+title: "20201201_OS_radierant_orthologs"
+author: "Matt Paul"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output:  
+  html_document:
+    code_folding: hide
+    number_sections: TRUE
+    theme: yeti
+    highlight: tango
+    toc: true
+    toc_float: true
+---
+
+# Plan
+
+Repeat comparison but include bombyx. 
+
+Compare to d melanogaster.
+then also comapre across in both directiosns.
+
+Look for overlaps. 
+
+```{r}
+require(magrittr)
+require(tidyverse)
+require(ShortRead)
+require(Herper)
+
+
+```
+
+
+```{R, eval=F}
+
+file.copy("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa", "obiroi.fa")
+o_fa<-readFasta("obiroi.fa")
+
+require(Herper)
+export_CondaEnv("eggnog", yml_export= "eggnog_tom.yml", file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+import_CondaEnv("eggnog_tom.yml", "eggnog", pathToMiniConda="/rugpfs/fs0/brc/scratch/mpaul/herper_conda")
+
+#install_CondaTools("ete3_external_apps","eggnog",pathToMiniConda="/rugpfs/fs0/brc/scratch/mpaul/herper/eggnog",updateEnv=TRUE,channels="etetoolkit",verbose=TRUE)
+#external apps is not installed. this gives warning in build check. unclear why or if needed. 
+
+Herper::with_CondaEnv("eggnog",system("ete3 build check"),pathToMiniConda="/rugpfs/fs0/brc/scratch/mpaul/herper_conda")
+Herper::with_CondaEnv("eggnog",system("ete3 ncbiquery -v 0"),pathToMiniConda="/rugpfs/fs0/brc/scratch/mpaul/herper_conda")
+
+
+#install_CondaTools("python=2.7","eggnog",pathToMiniConda="/rugpfs/fs0/brc/scratch/mpaul/herper_conda",updateEnv=TRUE,channels="etetoolkit",verbose=TRUE)
+
+#install_CondaTools("ete3_external_apps","eggnog",pathToMiniConda="/rugpfs/fs0/brc/scratch/mpaul/herper_conda",updateEnv=TRUE,channels="etetoolkit",verbose=TRUE)
+
+# install_CondaTools(c("eggnog-mapper","ete3","ete_toolchain","ete3_external_apps"),"eggnog",channels="etetoolkit", pathToMiniConda= "/rugpfs/fs0/brc/scratch/mpaul/herper_conda/")
+# install_CondaTools("ete3","eggnog",pathToMiniConda="/rugpfs/fs0/brc/scratch/mpaul/herper_conda",updateEnv=TRUE,channels="etetoolkit",verbose=TRUE)
+# install_CondaTools("ete_toolchain","eggnog",pathToMiniConda="/rugpfs/fs0/brc/scratch/mpaul/herper_conda",updateEnv=TRUE,channels="etetoolkit",verbose=TRUE)
+#install_CondaTools("ete3_external_apps","eggnog",pathToMiniConda="/rugpfs/fs0/brc/scratch/mpaul/herper/eggnog",updateEnv=TRUE,channels="etetoolkit",verbose=TRUE)
+
+```
+
+
+
+```{r}
+read.delim("TC_ 20201201_Result/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227.emapper.annotations", skip = 3) %>% DT::datatable()
+
+read.delim("TC_ 20201201_Result/eggnogAnno_WithPredictOrthp_CondaVersionPy2.emapper.predict_orthologs", skip = 3) %>% DT::datatable()
+test <- read.delim("TC_ 20201201_Result/eggnogAnno_WithPredictOrthp_CondaVersionPy2.emapper.predict_orthologs")
+nrow(test)
+
+# seed_ortholog just shows first 4 columns of the annotations result
+# read.delim("TC_ 20201201_Result/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227.emapper.seed_orthologs", skip = 5) %>% DT::datatable()
+
+
+#We are missing the orhtolog file 
+
+```
+
+
+```{r}
+
+Herper::with_CondaEnv("eggnog",system("python /rugpfs/fs0/brc/scratch/mpaul/eggnog/refactor-old/emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --tax_scope 50557 --target_taxa 7227 --resume --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_refactor_Scopeis50557_Targetis7227"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+```
+
+
+
+
+````{r}
+list_CondaPkgs("eggnog",pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+devtools::session_info()
+```
+
