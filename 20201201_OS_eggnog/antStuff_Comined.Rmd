@@ -1,0 +1,616 @@
+---
+title: "Herper_Eggnog"
+author: "Tom Carroll"
+date: "11/13/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(topGO)
+DoGo <- function(TestStuff,Gate,id2go,prefix="",DEGdir,anno1,anno2){
+  ####Read in files####
+  #setwd ("C:\\Documents and Settings\\tcarroll\\Desktop\\InesLatest\\New\\Results\\GOtmp\\GatingOnPRC")
+  ##################################
+  ##################################
+  ###################################
+  #   Function To Reformat GO Table
+  ###################################
+  ##################################
+  ###################################
+  
+  #
+  #
+  #   newTable <- function(GenBoth,testgenesboth,HBGOdataBOTH){
+  #     Levels <- buildLevels(HBGOdataBOTH@graph,root=NULL)
+  #     p <- apply(GenBoth,1,GenesInTerm,testgenesboth=testgenesboth,HBGOdataBOTH=HBGOdataBOTH)
+  #     d <- apply(GenBoth,1,DepthToTerm,testgenesboth=testgenesboth,HBGOdataBOTH=HBGOdataBOTH,Levels=Levels)
+  #     GenBoth <- apply(GenBoth,2,CleanGenTable)
+  #     GenBoth <- as.data.frame(GenBoth)
+  #     nearly <- (cbind(GenBoth,p,d))
+  #     colnames(nearly) <- c("Go.ID","Description","Annotated","Significant","Expected","rank in Elim","Classic","Elim","Weight","ParentChild","Under Fisher","Genes in Term","Term Depth")
+  #     return(nearly)
+  #   }
+  #   CleanGenTable <- function(nearly){
+  #     P <- gsub("<","",nearly)
+  #     #P <- as.integer(P)
+  #     return(P)
+  #   }
+  #   DepthToTerm <- function(GenBoth,testgenesboth,HBGOdataBOTH,Levels){
+  #     depth <- unname(unlist(mget(GenBoth[1],Levels$nodes2level)))
+  #     return(depth)
+  #   }
+  #   GenesInTerm <- function(GenBoth,testgenesboth,HBGOdataBOTH){
+  #     #allProbes <- unname(unlist(mget(GenBoth[1], envir=org.Hs.egGO2ALLEGS)[[1]],ifnotfound=NA))
+  #     allProbes <- unname(unlist(mget(GenBoth[1], envir=org.Hs.egGO2ALLEGS,ifnotfound=NA)[[1]]))
+  #
+  #     #PrintingList <- printGenes(HBGOdataBOTH, whichTerms = GenBoth[1], chip = "org.Hs.eg.db", geneCutOff=30000)[,3]
+  #     PrintingList <- allProbes[allProbes %in% names(testgenesboth[testgenesboth==1])]
+  #     if(!all(is.na(PrintingList))){
+  #       allSymbols <- unname(unlist(mget(PrintingList, envir=org.Hs.egSYMBOL,ifnotfound=NA)))
+  #     }
+  #     else {allSymbols <- NA}
+  #     #return(cat(unique(allSymbols),sep=";"))
+  #     almost <- (paste(unique(allSymbols),sep="",collapse=";"))
+  #     #depth <- unname(unlist(mget(GenBoth[1],buildLevels(HBGOdataBOTH@graph,root=NULL)$nodes2level)))
+  #     return(almost)
+  #     #colnames(almost) <- c("Go.ID","Description","Annotated","Significant","Expected","rank in Elim","Classic","Elim","Weight","ParentChild","Genes in Term")
+  #   }
+  ##########################
+  ##########################
+  ##########
+  
+  
+  
+  # ############
+  # ## define the test statistic which will detect underrepresentation
+  # if(!isGeneric("GOFisherTestUnder"))
+  #   setGeneric("GOFisherTestUnder", function(object)
+  #     standardGeneric("GOFisherTestUnder"))
+  # setMethod("GOFisherTestUnder", "classicCount",
+  #           function(object) {
+  #             contMat <- contTable(object)
+  #             if(all(contMat == 0))
+  #               p.value <- 1
+  #             else
+  #               p.value <- fisher.test(contMat, alternative ="less")$p.value
+  #             ## "greater" is for over-, "less" for under-, and "two-sided" is for both alternatives
+  #             return(p.value)
+  #           })
+  # #########################
+  # test.stat <- new("classicCount", testStatistic = GOFisherTestUnder,name ="Fisher test underrepresentation")
+  # ###############################################
+  #
+  
+  
+  
+  
+  if (length(prefix) > 0){prefix <- paste0(prefix,"")}
+  ClusterEntrez <- vector("list",length=length(TestStuff))
+  testgenes <- vector("list",length=length(TestStuff))
+  
+  ClustAllForTopGo <- unlist(Gate,use.names=FALSE)
+  ClustAllForTopGo_u <- unique(ClustAllForTopGo)
+  
+  
+  
+  for(i in 1:length(ClusterEntrez)){
+    ClusterEntrez[[i]] <- unique(TestStuff[[i]][TestStuff[[i]] %in% unlist(Gate,use.names=FALSE)])
+    testgenes[[i]] <- factor(as.integer(ClustAllForTopGo_u %in% ClusterEntrez[[i]]))
+    names(testgenes[[i]]) <- ClustAllForTopGo_u
+  }
+  
+  print(testgenes[[i]])
+  for(i in 1:length(ClusterEntrez)){
+    if(length(ClusterEntrez[[i]]) != 0){
+      GOdataOneBP <- new("topGOdata",ontology = "BP",allGenes = testgenes[[i]],nodeSize = 3,annot=annFUN.GO2genes, GO2genes =  id2go)
+      GOdataOneMF <- new("topGOdata",ontology = "MF",allGenes = testgenes[[i]],nodeSize = 3,annot=annFUN.GO2genes, GO2genes =  id2go)
+      GOdataOneCC <- new("topGOdata",ontology = "CC",allGenes = testgenes[[i]],nodeSize = 3,annot=annFUN.GO2genes, GO2genes =  id2go)
+      resultOneBPC <- runTest(GOdataOneBP, "classic", "fisher")
+      resultOneBPW <- runTest(GOdataOneBP, "weight", "fisher")
+      resultOneBPE <- runTest(GOdataOneBP, "elim", "fisher")
+      #resultOneBPU <- getSigGroups(GOdataOneBP,test.stat)
+      # resultOneBPpC <- runTest(GOdataOneBP, "parentChild", "fisher")
+      resultOneMFC <- runTest(GOdataOneMF, "classic", "fisher")
+      resultOneMFW <- runTest(GOdataOneMF, "weight", "fisher")
+      resultOneMFE <- runTest(GOdataOneMF, "elim", "fisher")
+      #resultOneMFU <- getSigGroups(GOdataOneMF,test.stat)
+      #resultOneMFpC <- runTest(GOdataOneMF, "parentChild", "fisher")
+      resultOneCCC <- runTest(GOdataOneCC, "classic", "fisher")
+      resultOneCCW <- runTest(GOdataOneCC, "weight", "fisher")
+      resultOneCCE <- runTest(GOdataOneCC, "elim", "fisher")
+      # resultOneCCU <- getSigGroups(GOdataOneCC,test.stat)
+      # resultOneCCpC <- runTest(GOdataOneCC, "parentChild", "fisher")
+      GenOneBP <- GenTable(GOdataOneBP,resultOneBPC,resultOneBPW,resultOneBPE,topNodes=length(GOdataOneBP@graph@nodes))
+      GenOneMF <- GenTable(GOdataOneMF,resultOneMFC,resultOneMFW,resultOneMFE,topNodes=length(GOdataOneMF@graph@nodes))
+      GenOneCC <- GenTable(GOdataOneCC,resultOneCCC,resultOneCCW,resultOneCCE,topNodes=length(GOdataOneCC@graph@nodes))
+      
+      testD <- names(testgenes[[i]])[(testgenes[[i]]) == 1]
+      temp <- list()
+      temp2 <- list()
+      temp3 <- list()
+      for(l in 1:nrow(GenOneBP)){
+        lll <- ls(GOdataOneBP@graph@nodeData@data[[GenOneBP[l,1]]]$genes)
+        llssa <- intersect(lll,testD)
+        temp[[l]] <- paste(llssa,sep="",collapse=";")
+        # temp2[[l]] <-  paste(anno1$Gene.names...primary..[anno1$Entry %in% llssa],sep="",collapse=";")
+        temp3[[l]] <- paste(anno2$V6[anno2$V1 %in% llssa],sep="",collapse=";")
+      }
+      GenOneBP$GenesInTermAndTest <- unlist(temp)
+      GenOneBP$GenesInTermAndTest_UniprotName <- unlist(temp2)
+      GenOneBP$GenesInTermAndTest_eggNogName <- unlist(temp3)
+      
+      temp <- list()
+      temp2 <- list()
+      temp3 <- list()
+      for(l in 1:nrow(GenOneMF)){
+        lll <- ls(GOdataOneMF@graph@nodeData@data[[GenOneMF[l,1]]]$genes)
+        llssa <- intersect(lll,testD)
+        temp[[l]] <- paste(llssa,sep="",collapse=";")
+        # temp2[[l]] <-  paste(anno1$Gene.names...primary..[anno1$Entry %in% llssa],sep="",collapse=";")
+        temp3[[l]] <- paste(anno2$V6[anno2$V1 %in% llssa],sep="",collapse=";")
+      }
+      GenOneMF$GenesInTermAndTest <- unlist(temp)
+      GenOneMF$GenesInTermAndTest_UniprotName <- unlist(temp2)
+      GenOneMF$GenesInTermAndTest_eggNogName <- unlist(temp3)
+      
+      
+      temp <- list()
+      temp2 <- list()
+      temp3 <- list()
+      for(l in 1:nrow(GenOneCC)){
+        lll <- ls(GOdataOneCC@graph@nodeData@data[[GenOneCC[l,1]]]$genes)
+        llssa <- intersect(lll,testD)
+        temp[[l]] <- paste(llssa,sep="",collapse=";")
+        # temp2[[l]] <-  paste(anno1$Gene.names...primary..[anno1$Entry %in% llssa],sep="",collapse=";")
+        temp3[[l]] <- paste(anno2$V6[anno2$V1 %in% llssa],sep="",collapse=";")
+      }
+      GenOneCC$GenesInTermAndTest <- unlist(temp)
+      # GenOneCC$GenesInTermAndTest_UniprotName <- unlist(temp2)
+      GenOneCC$GenesInTermAndTest_eggNogName <- unlist(temp3)
+      
+      
+      # GenOneBP <- GenTable(GOdataOneBP,resultOneBPC,resultOneBPW,resultOneBPE,resultOneBPpC,resultOneBPU,topNodes=length(GOdataOneBP@graph@nodes))
+      #GenOneMF <- GenTable(GOdataOneMF,resultOneMFC,resultOneMFW,resultOneMFE,resultOneMFpC,resultOneMFU,topNodes=length(GOdataOneMF@graph@nodes))
+      #GenOneCC <- GenTable(GOdataOneCC,resultOneCCC,resultOneCCW,resultOneCCE,resultOneCCpC,resultOneCCU,topNodes=length(GOdataOneCC@graph@nodes))
+      
+      #OneBP <- newTable(GenOneBP,testgenes[[i]],GOdataOneBP)
+      #OneMF <- newTable(GenOneMF,testgenes[[i]],GOdataOneMF)
+      #OneCC <- newTable(GenOneCC,testgenes[[i]],GOdataOneCC)
+      write.table(GenOneBP,paste0(prefix,"_BP.csv"),sep=",",row.names = FALSE)
+      write.table(GenOneMF,paste0(prefix,"_MF.csv"),sep=",",row.names = FALSE)
+      write.table(GenOneCC,paste0(prefix,"_CC.csv"),sep=",",row.names = FALSE)
+      #write.table(OneMF,paste("C:\\Users\\carrol09\\Santiago\\",prefix,names(TestStuff[i]),"_MF_","GoTable.csv",sep=""),sep=",",row.names = FALSE)
+      #write.table(OneCC,paste("C:\\Users\\carrol09\\Santiago\\",prefix,names(TestStuff[i]),"_CC_","GoTable.csv",sep=""),sep=",",row.names = FALSE)
+    }else{
+      GenOneBP <- data.frame(GO.ID=NA,Term=NA,Annotated=NA,Significant=NA,Expected=NA,"Rank in result2"=NA,result1=NA,result2=NA,result3=NA,result4=NA)
+      write.table(GenOneBP,prefix,sep=",",row.names = FALSE)
+    }
+  }
+  return(list(GenOneBP,GenOneMF,GenOneCC))
+}
+
+DoGo2 <- function(TestStuff,Gate,id2go,prefix="",DEGdir,anno1,anno2){
+  ####Read in files####
+  #setwd ("C:\\Documents and Settings\\tcarroll\\Desktop\\InesLatest\\New\\Results\\GOtmp\\GatingOnPRC")
+  ##################################
+  ##################################
+  ###################################
+  #   Function To Reformat GO Table
+  ###################################
+  ##################################
+  ###################################
+  
+  #
+  #
+  #   newTable <- function(GenBoth,testgenesboth,HBGOdataBOTH){
+  #     Levels <- buildLevels(HBGOdataBOTH@graph,root=NULL)
+  #     p <- apply(GenBoth,1,GenesInTerm,testgenesboth=testgenesboth,HBGOdataBOTH=HBGOdataBOTH)
+  #     d <- apply(GenBoth,1,DepthToTerm,testgenesboth=testgenesboth,HBGOdataBOTH=HBGOdataBOTH,Levels=Levels)
+  #     GenBoth <- apply(GenBoth,2,CleanGenTable)
+  #     GenBoth <- as.data.frame(GenBoth)
+  #     nearly <- (cbind(GenBoth,p,d))
+  #     colnames(nearly) <- c("Go.ID","Description","Annotated","Significant","Expected","rank in Elim","Classic","Elim","Weight","ParentChild","Under Fisher","Genes in Term","Term Depth")
+  #     return(nearly)
+  #   }
+  #   CleanGenTable <- function(nearly){
+  #     P <- gsub("<","",nearly)
+  #     #P <- as.integer(P)
+  #     return(P)
+  #   }
+  #   DepthToTerm <- function(GenBoth,testgenesboth,HBGOdataBOTH,Levels){
+  #     depth <- unname(unlist(mget(GenBoth[1],Levels$nodes2level)))
+  #     return(depth)
+  #   }
+  #   GenesInTerm <- function(GenBoth,testgenesboth,HBGOdataBOTH){
+  #     #allProbes <- unname(unlist(mget(GenBoth[1], envir=org.Hs.egGO2ALLEGS)[[1]],ifnotfound=NA))
+  #     allProbes <- unname(unlist(mget(GenBoth[1], envir=org.Hs.egGO2ALLEGS,ifnotfound=NA)[[1]]))
+  #
+  #     #PrintingList <- printGenes(HBGOdataBOTH, whichTerms = GenBoth[1], chip = "org.Hs.eg.db", geneCutOff=30000)[,3]
+  #     PrintingList <- allProbes[allProbes %in% names(testgenesboth[testgenesboth==1])]
+  #     if(!all(is.na(PrintingList))){
+  #       allSymbols <- unname(unlist(mget(PrintingList, envir=org.Hs.egSYMBOL,ifnotfound=NA)))
+  #     }
+  #     else {allSymbols <- NA}
+  #     #return(cat(unique(allSymbols),sep=";"))
+  #     almost <- (paste(unique(allSymbols),sep="",collapse=";"))
+  #     #depth <- unname(unlist(mget(GenBoth[1],buildLevels(HBGOdataBOTH@graph,root=NULL)$nodes2level)))
+  #     return(almost)
+  #     #colnames(almost) <- c("Go.ID","Description","Annotated","Significant","Expected","rank in Elim","Classic","Elim","Weight","ParentChild","Genes in Term")
+  #   }
+  ##########################
+  ##########################
+  ##########
+  
+  
+  
+  # ############
+  # ## define the test statistic which will detect underrepresentation
+  # if(!isGeneric("GOFisherTestUnder"))
+  #   setGeneric("GOFisherTestUnder", function(object)
+  #     standardGeneric("GOFisherTestUnder"))
+  # setMethod("GOFisherTestUnder", "classicCount",
+  #           function(object) {
+  #             contMat <- contTable(object)
+  #             if(all(contMat == 0))
+  #               p.value <- 1
+  #             else
+  #               p.value <- fisher.test(contMat, alternative ="less")$p.value
+  #             ## "greater" is for over-, "less" for under-, and "two-sided" is for both alternatives
+  #             return(p.value)
+  #           })
+  # #########################
+  # test.stat <- new("classicCount", testStatistic = GOFisherTestUnder,name ="Fisher test underrepresentation")
+  # ###############################################
+  #
+  
+  
+  
+  
+  if (length(prefix) > 0){prefix <- paste0(prefix,"")}
+  ClusterEntrez <- vector("list",length=length(TestStuff))
+  testgenes <- vector("list",length=length(TestStuff))
+  
+  ClustAllForTopGo <- unlist(Gate,use.names=FALSE)
+  ClustAllForTopGo_u <- unique(ClustAllForTopGo)
+  
+  
+  
+  for(i in 1:length(ClusterEntrez)){
+    ClusterEntrez[[i]] <- unique(TestStuff[[i]][TestStuff[[i]] %in% unlist(Gate,use.names=FALSE)])
+    testgenes[[i]] <- factor(as.integer(ClustAllForTopGo_u %in% ClusterEntrez[[i]]))
+    names(testgenes[[i]]) <- ClustAllForTopGo_u
+  }
+  
+        message("Building Graph for BP")
+      GOdataOneBP <- new("topGOdata",ontology = "BP",allGenes = testgenes[[i]],nodeSize = 3,annot=annFUN.GO2genes, GO2genes =  id2go)
+        message("Building Graph for MF")
+      GOdataOneMF <- new("topGOdata",ontology = "MF",allGenes = testgenes[[i]],nodeSize = 3,annot=annFUN.GO2genes, GO2genes =  id2go)
+        message("Building Graph for CC")
+
+      GOdataOneCC <- new("topGOdata",ontology = "CC",allGenes = testgenes[[i]],nodeSize = 3,annot=annFUN.GO2genes, GO2genes =  id2go)
+
+        message("Finished building graphs")
+
+              
+      tempBP <- list()
+      tempMF <- list()
+      tempCC <- list()
+        message("Extracting GO for CC")
+        for(l in 1:length(GOdataOneCC@graph@nodeData@data)){
+          tempCC[[l]] <- ls(GOdataOneCC@graph@nodeData@data[[l]]$genes)
+        }
+        names(tempCC) <- names(GOdataOneCC@graph@nodeData@data)  
+        message("Extracting GO for MF")
+        for(l in 1:length(GOdataOneMF@graph@nodeData@data)){
+          tempMF[[l]] <- ls(GOdataOneMF@graph@nodeData@data[[l]]$genes)
+        }
+        names(tempMF) <- names(GOdataOneMF@graph@nodeData@data)    
+        message("Extracting GO for BP")
+
+        for(l in 1:length(GOdataOneBP@graph@nodeData@data)){
+          tempBP[[l]] <- ls(GOdataOneBP@graph@nodeData@data[[l]]$genes)
+        }
+        names(tempBP) <- names(GOdataOneBP@graph@nodeData@data)    
+        
+        message("Done!!")
+
+      
+  return(list(GOdataOneBP,GOdataOneMF,GOdataOneCC,tempBP,tempMF,tempCC))
+}
+
+
+```
+
+
+## Get sequence rom Uniprot
+
+```{r getSeqFromUniprot}
+require(UniProt.ws)
+taxon <- availableUniprotSpecies(pattern="biroi")
+obiroi <- UniProt.ws(taxon$`taxon ID`)
+allUniprotIDs <- keys(obiroi,keytype = "UNIPROTKB")
+allInfoColumns <- keytypes(obiroi)
+grep("UNIPROTKB",
+     allInfoColumns)
+
+bgTable <- select(obiroi,keys=allUniprotIDs,columns = allInfoColumns,keytype = "UNIPROTKB")
+require(Biostrings)
+seqToWrite <- AAStringSet(bgTable$SEQUENCE)
+names(seqToWrite) <- bgTable$UNIPROTKB
+writeXStringSet(seqToWrite,filepath = "/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa")
+
+```
+
+
+## Install Eggnog-mapper using Conda through Herper
+
+```{r install_Eggnog}
+require(Herper)
+
+install_CondaTools("eggnog-mapper","eggnog",pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+install_CondaTools("ete3","eggnog",pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"),updateEnv=TRUE,channels="etetoolkit",verbose=TRUE)
+install_CondaTools("ete_toolchain","eggnog",pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"),updateEnv=TRUE,channels="etetoolkit",verbose=TRUE)
+install_CondaTools("ete3_external_apps","eggnog",pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"),updateEnv=TRUE,channels="etetoolkit",verbose=TRUE)
+
+#ete3 is a framework for building trees in python. i think this is just setup. 
+Herper::with_CondaEnv("eggnog",system("ete3 build check"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+Herper::with_CondaEnv("eggnog",system("ete3 ncbiquery -v 0"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+# get the eggnog data
+with_CondaEnv("eggnog",system("download_eggnog_data.py --help"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+with_CondaEnv("eggnog",system(paste("download_eggnog_data.py -y -q --data_dir",file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+Herper::with_CondaEnv("eggnog",system("emapper.py --help"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+#this isthe eggnog run
+Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --tax_scope 50557 --target_taxa 7227 --resume --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond  --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnno_CondaVersionPy2"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+# Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 10 -m diamond --predict_ortho --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnno_WithPredictOrthp_CondaVersionPy2"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+
+
+```
+
+```{r}
+require(magrittr)
+require(tidyverse)
+eggnogAnno <- dir("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/",
+                  pattern="eggnogAnno_CondaVersionPy2.emapper",
+                  full.names = TRUE)
+
+
+
+myK <- read.delim(eggnogAnno[1],skip = 4,sep="\t",header = FALSE,comment.char = "#")
+myK2 <- myK %>% mutate(V1=gsub("tr\\|","",V1)) %>% mutate(V1=gsub("\\|.*","",V1)) %>% dplyr::select(V1,V7) %>% separate_rows(V7,sep = ",")
+
+myK3 <- myK %>% mutate(V1=gsub("tr\\|","",V1)) %>% mutate(V1=gsub("\\|.*","",V1)) 
+library(data.table)
+GO2Gene_eggNog <- as.data.table(myK2)[, toString(V1), by = list(V7)] %>% as.data.frame
+write.table(GO2Gene_eggNog,file="/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnno_CondaVersionPy2.txt",sep="\t",quote=FALSE,row.names = FALSE)
+```
+
+```{r}
+
+require(topGO)
+go2geneEggNog <- readMappings("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnno_CondaVersionPy2.txt")
+require(rio)
+pis <- import("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/Proteins in secretion.xlsx")
+pisOfI <- unique(as.vector(pis$`proteins in secretion`))
+
+allEggNog <- unique(as.vector(myK2$V1))
+myResEggNog <- DoGo(TestStuff = list(pisOfI),Gate = list(allEggNog),id2go=go2geneEggNog,prefix = "/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnno_CondaVersionPy2_TopGO",anno1=myR,anno2=myK3)
+
+
+myResEggNog <- DoGo2(TestStuff = list(pisOfI),Gate = list(allEggNog),id2go=go2geneEggNog,prefix = "/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnno_CondaVersionPy2_TopGO",anno1=myR,anno2=myK3)
+
+
+## Check by TopGO
+require(goseq)
+myREs <- allEggNog %in% pisOfI+0
+length <- 1
+bias <- 1
+nullp <- data.frame(DEgenes=myREs,bias.data=1,pwf=1)
+rownames(nullp) <- allEggNog
+myFrame <- data.frame(Genes=unlist(myResEggNog[[4]],use.names = FALSE),Category=rep(names(myResEggNog[[4]]),lengths(myResEggNog[[4]])))
+
+write.table(myFrame,file="/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnnoFromTopGO_CondaVersionPy2.txt",sep="\t",quote=FALSE,row.names = FALSE)
+
+ntR <- goseq(nullp,gene2cat = myFrame,method="Hypergeometric")
+     
+write.table(ntR,file="/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnno_CondaVersionPy2_GOSEQ.csv",sep="\t",quote=FALSE,row.names = FALSE)
+
+
+require(tidyverse)
+eggnogAnno <- dir("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/",
+                  pattern="eggnogAnno_CondaVersionPy2.emapper.annotations",
+                  full.names = TRUE)
+
+
+# aa <- read.delim("/Users/thomascarroll/Downloads/GO2Gene_eggnogAnno_CondaVersionPy2/eggnogAnno_CondaVersionPy2.emapper.annotations", sep="\t")
+
+
+# myK <- read.delim(eggnogAnno[1],skip = 4,sep="\t",header = FALSE,comment.char = "#")
+# myK2 <- myK %>% mutate(V1=gsub("tr\\|","",V1)) %>% mutate(V1=gsub("\\|.*","",V1)) %>% dplyr::select(V1,V14) %>% separate_rows(V14,sep = ",")
+# myK2 <- myK2[myK2$V14 != "",]
+# colnames(myK2) <- c("Genes","Categories")
+# write.table(myK2,file="/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/KEGG2Gene_eggnogAnno_CondaVersionPy2.txt",sep="\t",quote=FALSE,row.names = FALSE)
+# 
+# ntR <- goseq(nullp,gene2cat = myK2,method="Hypergeometric")
+# write.table(ntR,file="/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/KEGG2Gene_eggnogAnno_CondaVersionPy2_GOSEQ.csv",sep="\t",quote=FALSE,row.names = FALSE)
+#   
+
+```
+
+
+```{r}
+eggnogAnno <- dir("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/",
+                  pattern="eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227.emapper",
+                  full.names = TRUE)
+```
+
+```{r}
+
+myK <- read.delim(eggnogAnno[1],skip = 4,sep="\t",header = FALSE,comment.char = "#")
+myK2 <- myK %>% mutate(V1=gsub("tr\\|","",V1)) %>% mutate(V1=gsub("\\|.*","",V1)) %>% dplyr::select(V1,V7) %>% separate_rows(V7,sep = ",")
+
+myK3 <- myK %>% mutate(V1=gsub("tr\\|","",V1)) %>% mutate(V1=gsub("\\|.*","",V1)) 
+library(data.table)
+GO2Gene_eggNog <- as.data.table(myK2)[, toString(V1), by = list(V7)] %>% as.data.frame
+write.table(GO2Gene_eggNog,file="/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227.txt",sep="\t",quote=FALSE,row.names = FALSE)
+```
+
+```{r}
+
+require(topGO)
+go2geneEggNog <- readMappings("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227.txt")
+require(rio)
+pis <- import("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/Proteins in secretion.xlsx")
+pisOfI <- unique(as.vector(pis$`proteins in secretion`))
+
+allEggNog <- unique(as.vector(myK2$V1))
+myResEggNog <- DoGo(TestStuff = list(pisOfI),Gate = list(allEggNog),id2go=go2geneEggNog,prefix = "/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227_TopGO",anno1=myR,anno2=myK3)
+
+
+
+
+myResEggNog <- DoGo2(TestStuff = list(pisOfI),Gate = list(allEggNog),id2go=go2geneEggNog,prefix = "/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227_TopGO",anno1=myR,anno2=myK3)
+
+
+## Check by TopGO
+require(goseq)
+myREs <- allEggNog %in% pisOfI+0
+length <- 1
+bias <- 1
+nullp <- data.frame(DEgenes=myREs,bias.data=1,pwf=1)
+rownames(nullp) <- allEggNog
+myFrame <- data.frame(Genes=unlist(myResEggNog[[4]],use.names = FALSE),Category=rep(names(myResEggNog[[4]]),lengths(myResEggNog[[4]])))
+
+write.table(myFrame,file="/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnnoFromTopGO_CondaVersionPy2_Scopeis50557_Targetis7227.txt",sep="\t",quote=FALSE,row.names = FALSE)
+
+ntR <- goseq(nullp,gene2cat = myFrame,method="Hypergeometric")
+     
+write.table(ntR,file="/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/GO2Gene_eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227_GOSEQ.csv",sep="\t",quote=FALSE,row.names = FALSE)
+
+
+require(tidyverse)
+eggnogAnno <- dir("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/",
+                  pattern="eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227.emapper",
+                  full.names = TRUE)
+
+
+# aa <- read.delim("/Users/thomascarroll/Downloads/GO2Gene_eggnogAnno_CondaVersionPy2/eggnogAnno_CondaVersionPy2.emapper.annotations", sep="\t")
+
+
+# myK <- read.delim(eggnogAnno[1],skip = 4,sep="\t",header = FALSE,comment.char = "#")
+# myK2 <- myK %>% mutate(V1=gsub("tr\\|","",V1)) %>% mutate(V1=gsub("\\|.*","",V1)) %>% dplyr::select(V1,V14) %>% separate_rows(V14,sep = ",")
+# myK2 <- myK2[myK2$V14 != "",]
+# colnames(myK2) <- c("Genes","Categories")
+# write.table(myK2,file="/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/KEGG2Gene_eggnogAnno_CondaVersionPy2.txt",sep="\t",quote=FALSE,row.names = FALSE)
+# 
+# ntR <- goseq(nullp,gene2cat = myK2,method="Hypergeometric")
+# write.table(ntR,file="/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/KEGG2Gene_eggnogAnno_CondaVersionPy2_GOSEQ.csv",sep="\t",quote=FALSE,row.names = FALSE)
+
+```
+
+
+
+# Rest is misc..
+
+```{r}
+
+Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-master/tests/fixtures/test_queries.fa  --cpu 10 -m diamond --report_orthologs --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnnxl2"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi_test.fa  --cpu 10 -m diamond --report_orthologs --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnno3"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 20 -m diamond --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnno52"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+Herper::with_CondaEnv("eggnog",system("python /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/eggnog-mapper-master/emapper.py  -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-master/tests/fixtures/test_queries.fa  --cpu 10 -m diamond --report_orthologs --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnnlwwaaass2"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+Herper::install_CondaTools("python 3","eggnog_py3",pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+Herper::install_CondaTools(c("python>=3","psutil==5.7.0","biopython==1.76"),"eggnog_py3",pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"),updateEnv=TRUE)
+
+
+Herper::with_CondaEnv("eggnog_py3",system("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-2.0.2-rf1/emapper.py --help"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+Herper::with_CondaEnv("eggnog_py3",system("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-2.0.2-rf1/emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi_test.fa  --cpu 10 -m diamond --report_orthologs --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnno4_RF"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+Herper::with_CondaEnv("eggnog_py3",system("python /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-2.0.2-rf1/emapper.py  -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-master/tests/fixtures/test_queries.fa  --cpu 10 -m diamond --report_orthologs --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda_py3/ --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnnaxawlcdww2"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+Herper::with_CondaEnv("eggnog_py3",system(paste("python /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-2.0.2-rf1/download_eggnog_data.py -y -q --data_dir",file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda","dataDirConda_py3"))),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+Herper::with_CondaEnv("eggnog",system("python /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/eggnog-mapper-master/emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --report_orthologs --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnno52_Master2"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+Herper::with_CondaEnv("eggnog_py3",system(paste("python /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-refactor/download_eggnog_data.py -y -q -P -M --data_dir",file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda","dataDirConda_py3"))),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+Herper::with_CondaEnv("eggnog_py3",system("python /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-refactor/emapper.py  --help"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+Herper::with_CondaEnv("eggnog_py3",system("python /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-refactor/emapper.py  -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa  --cpu 10 -m diamond --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda_py3/ --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnno__RefactorMasterVersionPy3"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+Herper::with_CondaEnv("eggnog_py3",system("python /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-2.0.2-rf1/emapper.py  -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --report_orthologs --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda_py3/ --output  /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/eggnogAnno__Refactor2.0.2.VersionPy3"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+
+
+eggnog-mapper-2.0.2-rf1
+
+
+java -jar /rugpfs/fs0/ruit/scratch/tcarroll/picard.jar CollectRnaSeqMetrics REF_FLAT=/rugpfs/fs0/brc/scratch/tcarroll/ngsPipeR_Refs/hg19_UCSC/TxDb.Mmusculus.UCSC.mm10.knownGene.refflat STRAND_SPECIFICITY=NONE INPUT=/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/Darnell_Robert/20201110_CH_RNASeq/BAMs/Sorted_2966_KO_IN_3x.bam OUTPUT=/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/Darnell_Robert/20201110_CH_RNASeq/stats/Sorted_2965_KO_PD_2x.RNAMetrics VALIDATION_STRINGENCY=LENIENT    MINIMUM_LENGTH=500 RRNA_FRAGMENT_PERCENTAGE=0.8 VERBOSITY=INFO QUIET=false COMPRESSION_LEVEL=5 MAX_RECORDS_IN_RAM=500000 CREATE_INDEX=false CREATE_MD5_FILE=false GA4GH_CLIENT_SECRETS=client_secrets.json USE_JDK_DEFLATER=false USE_JDK_INFLATER=false
+
+
+Herper::with_CondaEnv("eggnog_py3",system("python --version"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-2.0.2-rf1/emapper.py
+
+/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-2.0.2-rf1/emapper.py
+/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi_test.fa
+
+
+  -h, --help   show this help message and exit
+  -D           Do not install the diamond database
+  -y           assume "yes" to all questions
+  -f           forces download even if the files exist
+  -s           simulate and print commands. Nothing is downloaded
+  -q           quiet_mode
+  --data_dir   Directory to use for DATA_PATH.
+
+```
+
+
+## Install Eggnog-mapper using Conda through Herper
+
+```{r getSeqFromUniprot}
+require(UniProt.ws)
+taxon <- availableUniprotSpecies(pattern="biroi")
+obiroi <- UniProt.ws(taxon$`taxon ID`)
+allUniprotIDs <- keys(obiroi,keytype = "UNIPROTKB")
+allInfoColumns <- keytypes(obiroi)
+grep("UNIPROTKB",
+     allInfoColumns)
+
+bgTable <- select(obiroi,keys=allUniprotIDs,columns = allInfoColumns,keytype = "UNIPROTKB")
+require(Biostrings)
+seqToWrite <- AAStringSet(bgTable$SEQUENCE)
+names(seqToWrite) <- bgTable$UNIPROTKB
+writeXStringSet(seqToWrite,filepath = "/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa")
+
+```
+
+
+```{r pressure, echo=FALSE}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
