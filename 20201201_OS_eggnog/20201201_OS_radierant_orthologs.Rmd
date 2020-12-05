@@ -16,10 +16,15 @@ output:
 
 Repeat comparison but include bombyx. 
 
+compare and contrast the moori datasets. look for overlaps etc. 
+
 Compare to d melanogaster.
 then also comapre across in both directiosns.
 
 Look for overlaps. 
+
+
+retry refafctored in simplest way so i can post on github
 
 ```{r}
 require(magrittr)
@@ -27,6 +32,23 @@ require(tidyverse)
 require(ShortRead)
 require(Herper)
 
+
+```
+
+```{r getSeqFromUniprot}
+require(UniProt.ws)
+taxon <- availableUniprotSpecies(pattern="Bombyx")
+bombyx <- UniProt.ws(7091)
+allUniprotIDs <- keys(bombyx ,keytype = "UNIPROTKB")
+allInfoColumns <- keytypes(bombyx )
+grep("UNIPROTKB",
+     allInfoColumns)
+
+bgTable <- select(bombyx ,keys=allUniprotIDs,columns = allInfoColumns,keytype = "UNIPROTKB")
+require(Biostrings)
+seqToWrite <- AAStringSet(bgTable$SEQUENCE)
+names(seqToWrite) <- bgTable$UNIPROTKB
+writeXStringSet(seqToWrite,filepath = "/rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/bombyx.fa")
 
 ```
 
@@ -76,8 +98,15 @@ nrow(test)
 ```
 
 ```{r, cache=T}
-# comapre to bombyx not melanogaster
-Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --tax_scope 50557 --target_taxa 7090 --resume --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7090"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+# comapre to bombyx mori not melanogaster
+Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --tax_scope 50557 --target_taxa 7091 --resume --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7091"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+
+```
+
+
+```{r, cache=T}
+# comapre to bombyx mori to melanogaster
+Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --tax_scope 50557 --target_taxa 7091 --resume --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7091"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
 
 ```
 
