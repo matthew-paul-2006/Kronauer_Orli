@@ -105,8 +105,8 @@ Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tca
 
 
 ```{r, cache=T}
-# comapre to bombyx mori to melanogaster
-Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --tax_scope 50557 --target_taxa 7091 --resume --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7091"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
+# comapre bombyx mori to melanogaster
+Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/bombyx.fa --cpu 30 -m diamond --tax_scope 50557 --target_taxa 7227 --resume --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7091"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
 
 ```
 
