@@ -119,16 +119,12 @@ Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/mpa
 
 ```
 
-
-
 ```{r, cache=T, eval=F}
 
 # comapre to ant not melanogaster
 Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --tax_scope 50557 --target_taxa 7227 --resume --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227_FAisObiroi"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
 
 ```
-
-
 
 
 ```{r, cache=T}
@@ -162,7 +158,7 @@ mydb <- DBI::dbReadTable(con, "eggnog") %>%
 
 mydb_7227 <- mydb %>% filter(Taxon=="7227")
   
-test <- apply(my_anno[1:5,],1,function(x){
+test <- apply(my_anno[1:211,],1,function(x){
   ogs<-str_split(x[19], ",", simplify = T)
   matches<-lapply(ogs, function(x){mydb_7227 %>% filter(grepl(x,groups)) %>% .[,1:3]})
   names(matches) <- ogs
@@ -170,9 +166,16 @@ test <- apply(my_anno[1:5,],1,function(x){
   return(matches)
 })
 
+names(test) <- my_anno$X.query_name
 
+OG_orthos<-lapply(1:length(test),function(x){
+  my_name<-names(test)[x]
+  #test[[x]]  %>% as_tibble(rownames="OG") %>% separate(OG,c("OG","n"),"[.]")
+  orthos<-data.frame("query"=my_name,"result"=unique(test[[x]]$Protein))
+  return(orthos)
+  })
 
-
+OG_orthos<-do.call( "rbind", OG_orthos)
 ```
 
 
