@@ -115,13 +115,99 @@ Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/mpa
 ```
 
 
-```{r, cache=T}
+```{r, cache=T, eval=F}
 
 Herper::with_CondaEnv("eggnog",system("python /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-refactor/emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --tax_scope 50557 --target_taxa 7227 --resume --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_refactor_Scopeis50557_Targetis7227"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
 
 ```
 
 
+```{R}
+library(DBI)
+library(dplyr)
+library(dbplyr)
+library(RSQLite)
+library(tidyr)
+library(stringr)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/dataDirConda/eggnog.db")
+
+
+#DBI::dbReadTable(con, 'eggnog') %>% filter(grep("28IP2@1",groups))
+
+my_anno <- read.delim("TC_ 20201201_Result/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227.emapper.annotations", skip = 3)
+
+#test %>% filter(grepl("42EW3@68295",groups))
+
+#DBI::dbGetQuery(con, "select * from eggnog limit 10") %>% separate(name, c("Taxon", "Protein"), "[.]", remove = F) %>% filter()
+
+mydb <- DBI::dbReadTable(con, "eggnog") %>% 
+  separate(name, c("Taxon", "Protein"), "[.]", remove = F, extra = "merge") 
+
+mydb_7227 <- mydb %>% filter(Taxon=="7227")
+  
+test <- apply(my_anno[1:5,],1,function(x){
+  ogs<-str_split(x[19], ",", simplify = T)
+  matches<-lapply(ogs, function(x){mydb_7227 %>% filter(grepl(x,groups)) %>% .[,1:3]})
+  names(matches) <- ogs
+  matches<-do.call( "rbind", matches)
+  return(matches)
+})
+
+
+
+
+```
+
+
+
+```{r}
+require(rio)
+
+#parse some of the datasets
+
+#zhang tribo datsaset
+zhang_pro<-import("published sets/1_zhang_JBC_2014/jbc.M114.599597-3_COMPARETOTRILBOIUM.xlsx")[-c(1,2),-11]
+colnames(zhang_pro)<-c("Category", "Gene_Bm", "ID","LL","LP","PA","Gene_Tc", "ID", "RNAi_Pheno_Larva","RNAi_Pheno_Adult")
+
+it<- zhang_pro %>% .$Category %>% is.na()
+for (i in 1:length(it)){
+if(it[i]==TRUE){
+  it2<-max(which(!it)[which(!it)<i])
+  zhang_pro$Category[i]<-zhang_pro$Category[it2]
+}}
+zhang_pro[3,c(2:4)]<-zhang_pro[2,c(2:4)]
+
+zhang_pro[,4:6][is.na(zhang_pro[,4:6])]<-0
+zhang_pro[,4:6][zhang_pro[,4:6]=="√"]<-1
+
+zhang_trib <- list()
+zhang_trib$verified_RNAi<-rbind(zhang_pro[c(1:26,36:45),])
+zhang_trib$unverified_RNAi<-zhang_pro[27:35,]
+  
+#zhang prot datsaset
+
+zhang_pro<-import("published sets/1_zhang_JBC_2014/jbc.M114.599597-6_proteinlist.xls")
+zhang_pro<-zhang_pro[-c(1:3),]
+colnames(zhang_pro)<-c("LL","LP","PA","Gene_Bm","Accesion_ID", "Weight","pI","Tc", "Dm", "Ms", "Hs", "Notes")
+zhang_pro<-zhang_pro[!is.na(zhang_pro$Accesion_ID),]
+
+zhang_pro$Category <-c(rep("Immunity related protein",10), rep("Peptidase",9), rep("Oxido-dehydrogenase",19), rep("Hydrolase",13), rep("Esterase",5), rep("ATPase",3), rep("Serine protease",16), rep("Serpin",18), rep("Nutrition storage",12), rep("Binding protein",11), rep("Chitine related protein",8), rep("Cuticular protein",6), rep("Yellow protein",5), rep("Other protein",8), rep("Proteins with unknown function",29) )
+
+zhang_pro[,1:3][is.na(zhang_pro[,1:3])]<-0
+zhang_pro[,1:3][zhang_pro[,1:3]=="√"]<-1
+
+zhang_pro$Weight <- gsub("\n","",zhang_pro$Weight)
+zhang_pro$Accesion_ID <- gsub("\n","",zhang_pro$Accesion_ID)
+zhang_pro$pI <- gsub("\n","",zhang_pro$pI)
+
+zhang_pro <- zhang_pro[,c(13,4,1,2,3,5:12)]
+
+#liu prot datsaset
+tmp<-import("published sets/2_Liu_JP_2018/1-s2.0-S1874391917304104-mmc1.xlsx", which="Table S2")
+tmp<-import("published sets/2_Liu_JP_2018/1-s2.0-S1874391917304104-mmc1.xlsx", which="Table S3")
+colnames(tmp)<-c()
+```
 
 
 ````{r}
