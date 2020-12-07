@@ -176,6 +176,9 @@ OG_orthos<-lapply(1:length(test),function(x){
   })
 
 OG_orthos<-do.call( "rbind", OG_orthos)
+
+save(OG_orthos,test,file = "ortho_tests")
+
 ```
 
 
