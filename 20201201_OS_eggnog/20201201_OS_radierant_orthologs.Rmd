@@ -116,7 +116,7 @@ Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/mpa
 
 ```
 
-```{r, cache=T, eval=F}
+```{r, cache=T}
 
 # comapre to ant not melanogaster
 Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --tax_scope 50557 --target_taxa 7227 --resume --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227_FAisObiroi"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
@@ -124,7 +124,7 @@ Herper::with_CondaEnv("eggnog",system("emapper.py -i /rugpfs/fs0/brc/scratch/tca
 ```
 
 
-```{r, cache=T}
+```{r, cache=T, eval =F}
 
 Herper::with_CondaEnv("eggnog",system("python /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/eggnog-mapper-refactor/emapper.py -i /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/obiroi.fa --cpu 30 -m diamond --tax_scope 50557 --target_taxa 7227 --resume --data_dir /rugpfs/fs0/brc/scratch/tcarroll/autoProcessing//eggnogConda/dataDirConda/ --output  /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_refactor_Scopeis50557_Targetis7227"),pathToMiniConda=file.path("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/","eggnogConda"))
 
@@ -201,7 +201,7 @@ zhang_pro[,4:6][is.na(zhang_pro[,4:6])]<-0
 zhang_pro[,4:6][zhang_pro[,4:6]=="√"]<-1
 
 zhang_trib <- list()
-zhang_trib$verified_RNAi<-rbind(zhang_pro[c(1:26,36:45),])
+zhang_trib$verified_RNAi<-rbind(zhang_pro[c(1:25,37:45),])
 zhang_trib$unverified_RNAi<-zhang_pro[27:35,]
   
 #zhang prot datsaset
@@ -216,17 +216,106 @@ zhang_pro$Category <-c(rep("Immunity related protein",10), rep("Peptidase",9), r
 zhang_pro[,1:3][is.na(zhang_pro[,1:3])]<-0
 zhang_pro[,1:3][zhang_pro[,1:3]=="√"]<-1
 
+zhang_pro$Gene_Bm <- gsub("\n","",zhang_pro$Gene_Bm )
 zhang_pro$Weight <- gsub("\n","",zhang_pro$Weight)
 zhang_pro$Accesion_ID <- gsub("\n","",zhang_pro$Accesion_ID)
 zhang_pro$pI <- gsub("\n","",zhang_pro$pI)
 
 zhang_pro <- zhang_pro[,c(13,4,1,2,3,5:12)]
 
+
 #liu prot datsaset
 tmp<-import("published sets/2_Liu_JP_2018/1-s2.0-S1874391917304104-mmc1.xlsx", which="Table S2")
+
+colnames(tmp)<-c(tmp[1,])
+tmp<-tmp[-1,]
+colnames(tmp)[1]<-"Category"
+liu_allproteins<-tmp
+  
 tmp<-import("published sets/2_Liu_JP_2018/1-s2.0-S1874391917304104-mmc1.xlsx", which="Table S3")
-colnames(tmp)<-c()
+my_names<-c(paste0("WMF_",tmp[2,1:6]), paste0("PMF_",tmp[2,1:6]))
+tmp<-tmp[-(1:2),]
+colnames(tmp)<-my_names
+tmp1<-data.frame(tmp[,1:3],"LP"=1)
+tmp2<-data.frame(tmp[,7:9],"PA"=1)
+
+tmp3<-merge(liu_allproteins,tmp1[,c(1,4)], by.x="Protein ID", by.y="WMF_Protein.ID", all=T)
+tmp3<-merge(tmp3,tmp2[,c(1,4)], by.x="Protein ID", by.y="PMF_Protein.ID", all=T)
+tmp3[apply(tmp3[,c(23,24)], 1,function(x){all(is.na(x))}),c(23,24)]<-1
+tmp3[,c(23,24)][is.na(tmp3[,c(23,24)])]<-0
+
+liu_pro<-tmp3
+
+liu_pro<-liu_pro[c(2,1,23,24,3:22)]
+
+#Qu prot datsaset
+
+# this dataset is a little weird. they did MS for both LP and PA stages, but they did not actually give info on either apart from a ratio. 
+tmp<-import("published sets/3_Qu_JPR_2014/pr5000957_si_005 (1).xlsx", which="Table S2")
+
+colnames(tmp)<- tmp[2,]
+tmp<-tmp[-(1:2),]
+qu_pro<-tmp[,c(2,3,1,4:16)]
+
 ```
+
+comapre datasets
+```{R}  
+require(UpSetR)
+require(viridis)
+#start comparing datasets. integrate trib to start
+
+#merge to a single ID. then merge them together. 
+
+
+trib_in <- merge(data.frame("Gene_Bm"=unique(zhang_trib$verified_RNAi[,2]), "T_T"=1), zhang_pro, all=T)
+#need some manula annotation as matches are not perfect due to human annotation
+trib_in[c(15:17,105,64,116,129,163,176),2]<-1
+trib_in<-trib_in[-c(14,23,63,88,98,162,175),]
+trib_in$T_T[is.na(trib_in$T_T)]<-0
+
+zhang_overlaps<-trib_in[,c(2,4,5,6)]
+zhang_overlaps[]<-lapply(trib_in[,c(2,4,5,6)], function(x) as.numeric(as.character(x)))
+
+upset(zhang_overlaps)
+
+
+
+
+bombyx <- UniProt.ws(7091)
+
+NP<-trib_in %>% filter(str_detect(Accesion_ID, "^NP")) %>% pull(Accesion_ID) %>% select(bombyx, keys=., keytype="REFSEQ_PROTEIN", columns=c("REFSEQ_PROTEIN","EMBL/GENBANK/DDBJ","EMBL/GENBANK/DDBJ_CDS","ENSEMBL_GENOMES","ENTREZ_GENE","GI_NUMBER*"))
+
+trib_in$Accesion_ID<- gsub("XP_004930585.1","BGIBMGA006497", trib_in$Accesion_ID)
+trib_in$Accesion_ID<- gsub("-PA","",trib_in$Accesion_ID)
+
+BG<-trib_in %>% filter(str_detect(Accesion_ID, "^BG")) %>% pull(Accesion_ID) %>% select(bombyx, keys=., keytype="ENSEMBL_GENOMES", columns=c("REFSEQ_PROTEIN","EMBL/GENBANK/DDBJ","EMBL/GENBANK/DDBJ_CDS","ENSEMBL_GENOMES","ENTREZ_GENE","GI_NUMBER*"))
+
+EMBL<-trib_in %>% filter(!str_detect(Accesion_ID, "^BG")) %>% filter(!str_detect(Accesion_ID, "^NP")) %>%  pull(Accesion_ID)  %>% select(bombyx, keys=., keytype="EMBL/GENBANK/DDBJ_CDS", columns=c("REFSEQ_PROTEIN","EMBL/GENBANK/DDBJ","EMBL/GENBANK/DDBJ_CDS","ENSEMBL_GENOMES","ENTREZ_GENE","GI_NUMBER*"))
+  
+  
+NP_merge<-trib_in %>% filter(str_detect(Accesion_ID, "^NP")) %>% merge(.,NP, by.x="Accesion_ID",  by.y= "REFSEQ_PROTEIN" ) %>% filter(!duplicated(Accesion_ID))
+                                                              
+BG_merge<-trib_in %>% filter(str_detect(Accesion_ID, "^BG")) %>% merge(.,BG, by.x="Accesion_ID",  by.y= "ENSEMBL_GENOMES PROTEIN" ) %>% filter(!duplicated(Accesion_ID))
+
+EMBL_merge <-trib_in %>% filter(!str_detect(Accesion_ID, "^BG")) %>% filter(!str_detect(Accesion_ID, "^NP")) %>% merge(.,EMBL, by.x="Accesion_ID",  by.y= "EMBL/GENBANK/DDBJ_CDS" )  %>% filter(!duplicated(Accesion_ID))
+
+liu_pro$`Protein ID` <- gsub("-PA",liu_pro$`Protein ID`)
+liu_ids <- liu_pro %>% pull(`Protein ID`) %>% .[1:10] %>% select(bombyx, keys=., keytype="ENSEMBL_GENOMES", columns=c("REFSEQ_PROTEIN","EMBL/GENBANK/DDBJ","EMBL/GENBANK/DDBJ_CDS","ENSEMBL_GENOMES","ENTREZ_GENE","GI_NUMBER*"))
+
+qu_pro$`Protein ID` <- gsub("gi|","",q_pro$`Protein ID`)
+qu_ids <- liu_pro %>% pull(`Protein ID`) %>% select(bombyx, keys=., keytype="GI_NUMBER*", columns=c("REFSEQ_PROTEIN","EMBL/GENBANK/DDBJ","EMBL/GENBANK/DDBJ_CDS","ENSEMBL_GENOMES","ENTREZ_GENE","GI_NUMBER*"))
+
+
+SILKDB ID
+ 
+ NSEMBL_GENOMES
+
+ Accesion_ID (zhu) 
+ gi_number (qu)
+ 
+```
+
 
 
 ````{r}
