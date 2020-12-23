@@ -42,7 +42,7 @@ register(param)
 
 ```
 
-```{r getSeqFromUniprot, eval =F}
+```{r getSeqFromUniprot, eval =T}
 require(UniProt.ws)
 taxon <- availableUniprotSpecies(pattern="Bombyx")
 bombyx <- UniProt.ws(7091)
@@ -146,6 +146,7 @@ library(dbplyr)
 library(RSQLite)
 library(tidyr)
 library(stringr)
+require(rio)
 
 con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/eggnogConda/dataDirConda/eggnog.db")
 
@@ -170,7 +171,22 @@ mydb <- DBI::dbReadTable(con, "eggnog") %>%
 # mydb_7091 <- mydb %>% filter(Taxon=="7091")
 
 
-data_labels<-cbind("queryID"=c("2015173","2015173"), "queryname"=c("Obiroi","Obiroi"),"answerID"=c("7227","7091"),"answerName"=c("Dmelanogaster","Bmori")  )
+ /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7091_FAisObiroi
+ /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis2015173_FAisBmori
+ /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227_FAisBmori
+ /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227_FAisObiroi
+
+queryName <- dir(".", pattern="FAisObiroi.emapper.annotations") %>% str_split("FAis", simplify=T) %>% .[,2] %>% str_split(".emapp", simplify=T) %>% .[,1]
+answerID <- dir(".", pattern="FAisObiroi.emapper.annotations") %>% str_split("Targetis", simplify=T) %>% .[,2] %>% str_split("_FA", simplify=T) %>% .[,1] 
+
+data_labels<-cbind(answerID, queryName)
+
+tax_id<-cbind(queryID=c("2015173","7227","7091"),queryName = c("Obiroi","Dmelanogaster","Bmori"))
+data_labels<-merge(data_labels, tax_id)
+tax_id<-cbind(answerID=c("2015173","7227","7091"),answerName = c("Obiroi","Dmelanogaster","Bmori"))
+data_labels<-merge(data_labels, tax_id)[,c(3,2,1,4)]
+
+# data_labels<-cbind("queryID"=c("2015173","2015173"), "queryname"=c("Obiroi","Obiroi"),"answerID"=c("7227","7091"),"answerName"=c("Dmelanogaster","Bmori")  )
 
 
 my_homologs<- bplapply(1:length(anno_list), function(y, anno_list, data_labels, mydb){
@@ -219,7 +235,7 @@ rio::export(my_homologs, "obiroi_homolog_list.xlsx")
 
 
 ```{r}
-require(rio)
+
 
 #parse some of the datasets
 
