@@ -139,7 +139,7 @@ Herper::with_CondaEnv("eggnog",system("python /rugpfs/fs0/brc/scratch/tcarroll/a
 ```
 
 
-```{R}
+```{R, cache =T}
 library(DBI)
 library(dplyr)
 library(dbplyr)
@@ -170,11 +170,6 @@ mydb <- DBI::dbReadTable(con, "eggnog") %>%
 # mydb_7227 <- mydb %>% filter(Taxon=="7227")
 # mydb_7091 <- mydb %>% filter(Taxon=="7091")
 
-
- /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7091_FAisObiroi
- /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis2015173_FAisBmori
- /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227_FAisBmori
- /rugpfs/fs0/brc/scratch/mpaul/1_kronauer/orli/Kronauer_Orli/20201201_OS_eggnog/eggnogAnno_CondaVersionPy2_Scopeis50557_Targetis7227_FAisObiroi
 
 queryName <- dir(".", pattern="FAisObiroi.emapper.annotations") %>% str_split("FAis", simplify=T) %>% .[,2] %>% str_split(".emapp", simplify=T) %>% .[,1]
 answerID <- dir(".", pattern="FAisObiroi.emapper.annotations") %>% str_split("Targetis", simplify=T) %>% .[,2] %>% str_split("_FA", simplify=T) %>% .[,1] 
@@ -228,6 +223,7 @@ OG_orthos<-do.call( "rbind", OG_orthos)
 comp_names<-apply(data_labels,1,function(x){paste(paste(x[1:2], collapse="_"),paste(x[3:4], collapse="_"),sep="vs")})
 
 names(my_homologs)<-comp_names
+
 rio::export(my_homologs, "obiroi_homolog_list.xlsx")
 
 ```
