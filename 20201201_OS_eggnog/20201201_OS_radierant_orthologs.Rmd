@@ -236,7 +236,17 @@ rio::export(my_homologs, "obiroi_homolog_list.xlsx")
 ```{r}
 my_homologs<-rio::import("obiroi_homolog_list.xlsx")
 pois <- rio::import("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/Proteins in secretion.xlsx")
+colnames(pois)<-"2015173_Obiroi"
 
+ObiroivsBmori_POI<- my_homologs[[2]]
+ObiroivsBmori_POI<-merge(pois, ObiroivsBmori_POI)
+my_homologs$ObiroivsBmori_POI <- ObiroivsBmori_POI
+
+ObiroivsDmelanogaster_POI<- my_homologs[[4]]
+ObiroivsDmelanogaster_POI<-merge(pois, ObiroivsDmelanogaster_POI)
+my_homologs$ObiroivsDmelanogaster_POI <- ObiroivsDmelanogaster_POI
+
+rio::export(my_homologs, "obiroi_homolog_list_withPOI.xlsx")
 ```
 ```{r}
 # my_homologs<-rio::import("obiroi_homolog_list.xlsx")
