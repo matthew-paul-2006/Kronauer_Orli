@@ -185,7 +185,10 @@ data_labels<-merge(data_labels, tax_id)[,c(3,2,1,4)]
 
 
 my_homologs<- bplapply(1:length(anno_list), function(y, anno_list, data_labels, mydb){
-
+  
+library(dplyr)
+library(magrittr)
+  
 my_current_db <-mydb %>% filter(Taxon==data_labels[y,3])
 ### do it for just one anno
 my_anno <- anno_list[[y]]
