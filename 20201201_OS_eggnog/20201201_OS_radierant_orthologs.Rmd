@@ -153,8 +153,8 @@ con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "/rugpfs/fs0/brc/scratch/tcarr
 
 #DBI::dbReadTable(con, 'eggnog') %>% filter(grep("28IP2@1",groups))
 anno_list<-
-  lapply(dir(".", pattern="FAisObiroi.emapper.annotations", full.names = T), read.delim, skip=3)
-names(anno_list)<-c("7091","7227")
+  lapply(dir(".", pattern="emapper.annotations", full.names = T), read.delim, skip=3)
+
 #my_anno <- anno_list[[1]]
 
 
@@ -171,8 +171,8 @@ mydb <- DBI::dbReadTable(con, "eggnog") %>%
 # mydb_7091 <- mydb %>% filter(Taxon=="7091")
 
 
-queryName <- dir(".", pattern="FAisObiroi.emapper.annotations") %>% str_split("FAis", simplify=T) %>% .[,2] %>% str_split(".emapp", simplify=T) %>% .[,1]
-answerID <- dir(".", pattern="FAisObiroi.emapper.annotations") %>% str_split("Targetis", simplify=T) %>% .[,2] %>% str_split("_FA", simplify=T) %>% .[,1] 
+queryName <- dir(".", pattern=".emapper.annotations") %>% str_split("FAis", simplify=T) %>% .[,2] %>% str_split(".emapp", simplify=T) %>% .[,1]
+answerID <- dir(".", pattern=".emapper.annotations") %>% str_split("Targetis", simplify=T) %>% .[,2] %>% str_split("_FA", simplify=T) %>% .[,1] 
 
 data_labels<-cbind(answerID, queryName)
 
@@ -193,6 +193,7 @@ library(stringr)
 my_current_db <-mydb %>% filter(Taxon==data_labels[y,3])
 ### do it for just one anno
 my_anno <- anno_list[[y]]
+my_anno <- my_anno[1:(nrow(my_anno)-3),]
 ## filter db down to just OGs of interest
 test <- apply(my_anno,1,function(x){
   ogs<-str_split(x[19], ",", simplify = T)
@@ -232,9 +233,33 @@ rio::export(my_homologs, "obiroi_homolog_list.xlsx")
 
 ```
 
-
-
 ```{r}
+my_homologs<-rio::import("obiroi_homolog_list.xlsx")
+pois <- rio::import("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/Proteins in secretion.xlsx")
+
+```
+```{r}
+# my_homologs<-rio::import("obiroi_homolog_list.xlsx")
+# require(UniProt.ws)
+# taxon <- availableUniprotSpecies(pattern="Bombyx")
+# bombyx <- UniProt.ws(7091)
+# allUniprotIDs <- keys(bombyx ,keytype = "UNIPROTKB")
+# allInfoColumns <- keytypes(bombyx )
+# grep("UNIPROTKB",
+#      allInfoColumns)
+# 
+# #bgTable <- select(bombyx ,keys=allUniprotIDs,columns = allInfoColumns,keytype = "UNIPROTKB")
+# bgTable <- select(bombyx ,keys=allUniprotIDs,columns = c("SEQUENCE"),keytype = "UNIPROTKB")
+
+
+```
+
+
+
+
+
+
+```{r, eval=F}
 
 library(stringr)
 #parse some of the datasets
@@ -314,7 +339,7 @@ qu_pro<-tmp[,c(2,3,1,4:16)]
 ```
 
 Compare datasets
-```{R}  
+```{r, eval=F}
 require(UpSetR)
 require(viridis)
 #start comparing datasets. integrate trib to start
@@ -369,7 +394,7 @@ zhang_final <- data.frame(zhang_final, "Zha_any"=1)[,c(1:6,13,7:12)]
 ```
 
 
-```{r}
+```{r, eval=F}
 
 liu_pro$`Protein ID` <- gsub("-PA","",liu_pro$`Protein ID`)
 BG <- liu_pro  %>% filter(str_detect(`Protein ID`, "^BG"))
@@ -411,7 +436,7 @@ liu_final <- data.frame(liu_final, "Liu_any"=1)[,c(1:4,11,5:10)]
 
 
 
-```{R}
+```{r, eval=F}
 
 #start matches with DDBJ as fewest gaps
 # apply(zhang_final,1, is.na) %>% rowSums()
