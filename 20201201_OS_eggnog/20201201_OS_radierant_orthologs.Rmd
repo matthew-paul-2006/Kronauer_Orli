@@ -188,6 +188,7 @@ my_homologs<- bplapply(1:length(anno_list), function(y, anno_list, data_labels, 
   
 library(dplyr)
 library(magrittr)
+library(stringr)
   
 my_current_db <-mydb %>% filter(Taxon==data_labels[y,3])
 ### do it for just one anno
@@ -235,7 +236,7 @@ rio::export(my_homologs, "obiroi_homolog_list.xlsx")
 
 ```{r}
 
-
+library(stringr)
 #parse some of the datasets
 
 #zhang tribo datsaset
