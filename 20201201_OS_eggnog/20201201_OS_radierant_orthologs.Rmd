@@ -42,7 +42,7 @@ register(param)
 
 ```
 
-```{r getSeqFromUniprot, eval =T}
+```{r getSeqFromUniprot, eval =F}
 require(UniProt.ws)
 taxon <- availableUniprotSpecies(pattern="Bombyx")
 bombyx <- UniProt.ws(7091)
