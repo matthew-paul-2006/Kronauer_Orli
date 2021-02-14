@@ -234,8 +234,8 @@ rio::export(my_homologs, "obiroi_homolog_list.xlsx")
 ```
 
 ```{r}
-my_homologs<-rio::import("obiroi_homolog_list.xlsx")
-pois <- rio::import("/rugpfs/fs0/brc/scratch/tcarroll/autoProcessing/BRC/obiroi/Proteins in secretion.xlsx")
+my_homologs<-rio::import_list("obiroi_homolog_list.xlsx")
+pois <- rio::import("Proteins in secretion.xlsx")
 colnames(pois)<-"2015173_Obiroi"
 
 ObiroivsBmori_POI<- my_homologs[[2]]

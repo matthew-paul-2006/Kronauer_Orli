@@ -13,7 +13,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = F, warning=F, message =F, cache=F, hide=TRUE)
 ```
 
 # Plan 
@@ -47,7 +47,7 @@ require(rio)
 
 ```
 
-```{r, eval=F}
+```{r}
 
 ## extract the intersting data from the published datasets
 
@@ -125,8 +125,11 @@ qu_pro<-tmp[,c(2,3,1,4:16)]
 
 ```
 
-Compare datasets
-```{r, eval=F}
+
+# Compare datasets
+
+## Just within the Zhang dataset
+```{r}
 require(UpSetR)
 require(viridis)
 #start comparing datasets. integrate trib to start
@@ -144,10 +147,11 @@ zhang_overlaps<-trib_in[,c(2,4,5,6)]
 zhang_overlaps[]<-lapply(trib_in[,c(2,4,5,6)], function(x) as.numeric(as.character(x)))
 
 #upset(zhang_overlaps)
+```
 
 
-
-
+```{r}
+# need to get comparable IDs over which to match up proteins - first get extra names for zhang
 bombyx <- UniProt.ws(7091)
 
 NP<-trib_in %>% filter(str_detect(Accesion_ID, "^NP")) %>% pull(Accesion_ID) %>% AnnotationDbi::select(bombyx, keys=., keytype="REFSEQ_PROTEIN", columns=c("REFSEQ_PROTEIN","EMBL/GENBANK/DDBJ","EMBL/GENBANK/DDBJ_CDS","ENSEMBL_GENOMES","ENTREZ_GENE","GI_NUMBER*"))
@@ -181,8 +185,8 @@ zhang_final <- data.frame(zhang_final, "Zha_any"=1)[,c(1:6,13,7:12)]
 ```
 
 
-```{r, eval=F}
-
+```{r}
+# need to get comparable IDs over which to match up proteins - first get extra names for liu
 liu_pro$`Protein ID` <- gsub("-PA","",liu_pro$`Protein ID`)
 BG <- liu_pro  %>% filter(str_detect(`Protein ID`, "^BG"))
 BG_merge <- BG %>%  pull(`Protein ID`)  %>% AnnotationDbi::select(bombyx, keys=.,  keytype="ENSEMBL_GENOMES", columns=c("REFSEQ_PROTEIN","EMBL/GENBANK/DDBJ","EMBL/GENBANK/DDBJ_CDS","ENSEMBL_GENOMES","ENTREZ_GENE","GI_NUMBER*"))
@@ -223,7 +227,7 @@ liu_final <- data.frame(liu_final, "Liu_any"=1)[,c(1:4,11,5:10)]
 
 
 
-```{r, eval=F}
+```{r}
 
 #start matches with DDBJ as fewest gaps
 # apply(zhang_final,1, is.na) %>% rowSums()
@@ -313,286 +317,402 @@ name_annos<-sapply(ss, function(x){
 })
 
 name_annos_new <- as.data.frame(t(name_annos))
+```
 
-l_idx <- which(!is.na(name_annos_new$Liu_Name) & duplicated(name_annos_new$Liu_Name))
-z_idx <- which(!is.na(name_annos_new$Zhang_Name) & duplicated(name_annos_new$Zhang_Name))
-
-ph_fin<-rep(0,20)
-idx_hit<-0
-
-for (i in 1:length(l_idx)){
-  print(i)
-  idx_temp<-which(unlist(name_annos_new[,2])==unlist(name_annos_new[l_idx[i],2]))
-  temp<-name_annos_new[idx_temp,]
-  gi<-unique(temp$GI_NUMBER.) %>% unlist()
-  
-  temp2<-sapply(gi,function(y){
-    gi_ind<-which(temp$GI_NUMBER. == y)
-    temp_gi<-temp[gi_ind,]
-    collapse_annos<-sapply(13:20, function(k){
-    name1<-unique(temp_gi[!is.na(temp_gi[,k]),k])
-    annos<-paste(name1[!(name1 == "NA")], collapse=";")
-    return(annos)
-      })
-    collapse_annos<-sapply(collapse_annos, function(j){
-    annos<- j %>% str_split(";", simplify=T) %>% unique() %>% paste(collapse=";")
-    return(annos)
-      })
-    collapse_annos[collapse_annos==""] <- NA
-    temp_out<-temp_gi[1,]
-    temp_out[1,13:20]<-collapse_annos
-    return(temp_out)
-      })
-  
-   ph <- temp2 %>% t() %>% as.data.frame()  
-   rownames(ph)<-NULL
-   
-   lapply(ph$GI_NUMBER., str_split, ";", simplify=T) -> test 
-   test_flat<-test
-   names(test_flat)<-letters[1:length(test_flat)]
-   #test[[which(is.na(names(test)))]]<-NULL
-   test_flat<-unlist(test_flat)
-  
-   my_overs<-sapply(1:length(test), function(b){
-        
-    my_overs<-test_flat[(test_flat %in% test[[b]]) & !is.na(names(test)[b])]
-    my_overs<- names(my_overs) %>% gsub("[[:digit:]]", "", .)
-    my_overs <- unique(my_overs[my_overs !=letters[b]])
-    my_overs <- which(letters[1:26] %in% my_overs)
-    my_out<-list(my_overs)
-    names(my_out)<-b
-    return(my_out)})
-  
- my_overs[lengths(my_overs)==0 ]<-NA
-  
- my_overs_am<-my_overs
- for(d in 1:length(my_overs)){
-  z=1    
-  if(any(!is.na(my_overs_am[[d]]))){
-  while(z==1){
-
-    for(k in 1:length(my_overs_am[[d]])){
-      
-      list_ind<-my_overs_am[[d]][k]
-      partner<-my_overs_am[[list_ind]]
-      if(any(!is.na(partner))){
-        my_overs_am[[d]]<-c(my_overs_am[[d]],partner)
-        my_overs_am[[list_ind]]<-NA
-      }}
-    my_overs_am[[d]] <- unique(my_overs_am[[d]])
-    if( all(is.na(my_overs_am[(my_overs_am[[d]] %>% sort() %>% .[-1])]))){
-      z<-0
-    }
-    }
-    
-  }}
-  
-  
-my_overs_am<-my_overs_am[!is.na(my_overs_am)]
-  
-annot<-sapply(my_overs_am, function(r){
-  annos<-sapply(13:20, function(k){
-  annos<-ph[r,k] %>% unlist() %>% str_split(";", simplify=T) %>% unique() %>% sort() %>% paste(collapse=";")
-  return(annos)
-      }) %>% as.data.frame() %>% t()
-  return(cbind(ph[r[1],1:12],annos))
-  })  %>% t() %>% as.data.frame()
-
-if(ncol(annot)==0){
-ph_fin<-rbind(ph_fin,ph)  
-  
-}else{
-colnames(annot)<-colnames(ph)
-new_ph<-rbind(annot, ph[(-unlist(my_overs_am)),] )
-ph_fin<-rbind(ph_fin,new_ph)
-}
-
-
-print(i)
-}
-
-ph_fin <- ph_fin[!is.na(unlist(ph_fin[,17])),]
-ph_fin <- ph_fin[-1,]
-colnames(ph_fin) <- colnames(name_annos_new)
-
-library(magrittr)
-ph_fin %<>% distinct() 
-
-name_annos_liufixed<-rbind(name_annos_new[!name_annos_new$Liu_Name %in% unlist(ph_fin$Liu_Name),],ph_fin)
-
-z_idx <- which(!is.na(name_annos_liufixed$Zhang_Name) & duplicated(name_annos_liufixed$Zhang_Name))
-
-ph_fin<-rep(0,20)
-idx_hit2<-0
-
-for (i in 1:length(z_idx)){
-  idx_temp<-which(unlist(name_annos_new[,2])==unlist(name_annos_new[z_idx[i],2]))
-  temp<-name_annos_new[idx_temp,]
-  gi<-unique(temp$GI_NUMBER.) %>% unlist()
-  
-  temp2<-sapply(gi,function(y){
-    gi_ind<-which(temp$GI_NUMBER. == y)
-    temp_gi<-temp[gi_ind,]
-    collapse_annos<-sapply(13:20, function(k){
-    name1<-unique(temp_gi[!is.na(temp_gi[,k]),k])
-    annos<-paste(name1[!(name1 == "NA")], collapse=";")
-    return(annos)
-      })
-    collapse_annos<-sapply(collapse_annos, function(j){
-    annos<- j %>% str_split(";", simplify=T) %>% unique() %>% paste(collapse=";")
-    return(annos)
-      })
-    collapse_annos[collapse_annos==""] <- NA
-    temp_out<-temp_gi[1,]
-    temp_out[1,13:20]<-collapse_annos
-    return(temp_out)
-      })
-  
-   ph <- temp2 %>% t() %>% as.data.frame()  
-   rownames(ph)<-NULL
-   
-   lapply(ph$GI_NUMBER., str_split, ";", simplify=T) -> test 
-   test_flat<-test
-   names(test_flat)<-letters[1:length(test_flat)]
-   #test[[which(is.na(names(test)))]]<-NULL
-   test_flat<-unlist(test_flat)
-  
-   my_overs<-sapply(1:length(test), function(b){
-        
-    my_overs<-test_flat[(test_flat %in% test[[b]]) & !is.na(names(test)[b])]
-    my_overs<- names(my_overs) %>% gsub("[[:digit:]]", "", .)
-    my_overs <- unique(my_overs[my_overs !=letters[b]])
-    my_overs <- which(letters[1:26] %in% my_overs)
-    my_out<-list(my_overs)
-    names(my_out)<-b
-    return(my_out)})
-  
- my_overs[lengths(my_overs)==0 ]<-NA
-  
- my_overs_am<-my_overs
- for(d in 1:length(my_overs)){
-  z=1    
-  if(any(!is.na(my_overs_am[[d]]))){
-  while(z==1){
-
-    for(k in 1:length(my_overs_am[[d]])){
-      
-      list_ind<-my_overs_am[[d]][k]
-      partner<-my_overs_am[[list_ind]]
-      if(any(!is.na(partner))){
-        my_overs_am[[d]]<-c(my_overs_am[[d]],partner)
-        my_overs_am[[list_ind]]<-NA
-      }}
-    my_overs_am[[d]] <- unique(my_overs_am[[d]])
-    if( all(is.na(my_overs_am[(my_overs_am[[d]] %>% sort() %>% .[-1])]))){
-      z<-0
-    }
-    }
-    
-  }}
-  
-  
-my_overs_am<-my_overs_am[!is.na(my_overs_am)]
-  
-annot<-sapply(my_overs_am, function(r){
-  annos<-sapply(13:20, function(k){
-  annos<-ph[r,k] %>% unlist() %>% str_split(";", simplify=T) %>% unique() %>% sort() %>% paste(collapse=";")
-  return(annos)
-      }) %>% as.data.frame() %>% t()
-  return(cbind(ph[r[1],1:12],annos))
-  })  %>% t() %>% as.data.frame()
-
-if(ncol(annot)==0){
-ph_fin<-rbind(ph_fin,ph)  
-  
-}else{
-colnames(annot)<-colnames(ph)
-new_ph<-rbind(annot, ph[(-unlist(my_overs_am)),] )
-ph_fin<-rbind(ph_fin,new_ph)
-}
-
-
-print(i)
-}
-
-
-
-
-
-
-
-
+```{r}
+# # because of 1:many mapping there are name duplicates. look for them and reduce if appropriate
+# l_idx <- which(!is.na(name_annos_new$Liu_Name) & duplicated(name_annos_new$Liu_Name))
+# z_idx <- which(!is.na(name_annos_new$Zhang_Name) & duplicated(name_annos_new$Zhang_Name))
+# 
+# ph_fin<-rep(0,20)
+# idx_hit<-0
+# 
 # for (i in 1:length(l_idx)){
-#   idx_temp<-which(unlist(name_annos[,2])==unlist(name_annos[l_idx[i],2]))
-#   temp<-name_annos[idx_temp,]
-#   idx<-which(!is.na(temp[,1]) & !is.na(temp[,2]))
+#   print(i)
+#   idx_temp<-which(unlist(name_annos_new[,2])==unlist(name_annos_new[l_idx[i],2]))
+#   temp<-name_annos_new[idx_temp,]
+#   gi<-unique(temp$GI_NUMBER.) %>% unlist()
 #   
-#   idx_hit<-c(idx_hit,idx_temp)
-#   
-#   if(length(idx)>0){
-#     ph<-temp[idx[1],]
-#   } else {
-#     ph<-temp[1,]
-#   }
-#   
-#   collapse_annos<-sapply(13:20, function(j){
-#     name1<-unique(temp[!is.na(temp[,j]),j])
+#   temp2<-sapply(gi,function(y){
+#     gi_ind<-which(temp$GI_NUMBER. == y)
+#     temp_gi<-temp[gi_ind,]
+#     collapse_annos<-sapply(13:20, function(k){
+#     name1<-unique(temp_gi[!is.na(temp_gi[,k]),k])
 #     annos<-paste(name1[!(name1 == "NA")], collapse=";")
-#     
 #     return(annos)
 #       })
-#   
 #     collapse_annos<-sapply(collapse_annos, function(j){
 #     annos<- j %>% str_split(";", simplify=T) %>% unique() %>% paste(collapse=";")
 #     return(annos)
 #       })
+#     collapse_annos[collapse_annos==""] <- NA
+#     temp_out<-temp_gi[1,]
+#     temp_out[1,13:20]<-collapse_annos
+#     return(temp_out)
+#       })
 #   
-#     ph[,13:20]<-collapse_annos
+#    ph <- temp2 %>% t() %>% as.data.frame()  
+#    rownames(ph)<-NULL
+#    
+#    lapply(ph$GI_NUMBER., str_split, ";", simplify=T) -> test 
+#    test_flat<-test
+#    names(test_flat)<-letters[1:length(test_flat)]
+#    #test[[which(is.na(names(test)))]]<-NULL
+#    test_flat<-unlist(test_flat)
+#   
+#    my_overs<-sapply(1:length(test), function(b){
+#         
+#     my_overs<-test_flat[(test_flat %in% test[[b]]) & !is.na(names(test)[b])]
+#     my_overs<- names(my_overs) %>% gsub("[[:digit:]]", "", .)
+#     my_overs <- unique(my_overs[my_overs !=letters[b]])
+#     my_overs <- which(letters[1:26] %in% my_overs)
+#     my_out<-list(my_overs)
+#     names(my_out)<-b
+#     return(my_out)})
+#   
+#  my_overs[lengths(my_overs)==0 ]<-NA
+#   
+#  my_overs_am<-my_overs
+#  for(d in 1:length(my_overs)){
+#   z=1    
+#   if(any(!is.na(my_overs_am[[d]]))){
+#   while(z==1){
 # 
-#   ph_fin<-rbind(ph_fin,ph)
-#   }
+#     for(k in 1:length(my_overs_am[[d]])){
+#       
+#       list_ind<-my_overs_am[[d]][k]
+#       partner<-my_overs_am[[list_ind]]
+#       if(any(!is.na(partner))){
+#         my_overs_am[[d]]<-c(my_overs_am[[d]],partner)
+#         my_overs_am[[list_ind]]<-NA
+#       }}
+#     my_overs_am[[d]] <- unique(my_overs_am[[d]])
+#     if( all(is.na(my_overs_am[(my_overs_am[[d]] %>% sort() %>% .[-1])]))){
+#       z<-0
+#     }
+#     }
+#     
+#   }}
+#   
+#   
+# my_overs_am<-my_overs_am[!is.na(my_overs_am)]
+#   
+# annot<-sapply(my_overs_am, function(r){
+#   annos<-sapply(13:20, function(k){
+#   annos<-ph[r,k] %>% unlist() %>% str_split(";", simplify=T) %>% unique() %>% sort() %>% paste(collapse=";")
+#   return(annos)
+#       }) %>% as.data.frame() %>% t()
+#   return(cbind(ph[r[1],1:12],annos))
+#   })  %>% t() %>% as.data.frame()
+# 
+# if(ncol(annot)==0){
+# ph_fin<-rbind(ph_fin,ph)  
+#   
+# }else{
+# colnames(annot)<-colnames(ph)
+# new_ph<-rbind(annot, ph[(-unlist(my_overs_am)),] )
+# ph_fin<-rbind(ph_fin,new_ph)
+# }
+# 
+# 
+# print(i)
+# }
+# 
+# ph_fin <- ph_fin[!is.na(unlist(ph_fin[,17])),]
+# ph_fin <- ph_fin[-1,]
+# colnames(ph_fin) <- colnames(name_annos_new)
+# 
+# 
+# ph_fin %<>% distinct() 
+# 
+# name_annos_liufixed<-rbind(name_annos_new[!name_annos_new$Liu_Name %in% unlist(ph_fin$Liu_Name),],ph_fin)
+# 
+# 
+# 
+# z_idx <- which(!is.na(name_annos_liufixed$Zhang_Name) & duplicated(name_annos_liufixed$Zhang_Name))
+# 
+# ph_fin<-rep(0,20)
+# idx_hit2<-0
+# 
+# for (i in 1:length(z_idx)){
+#   idx_temp<-which(unlist(name_annos_new[,2])==unlist(name_annos_new[z_idx[i],2]))
+#   temp<-name_annos_new[idx_temp,]
+#   gi<-unique(temp$GI_NUMBER.) %>% unlist()
+#   
+#   temp2<-sapply(gi,function(y){
+#     gi_ind<-which(temp$GI_NUMBER. == y)
+#     temp_gi<-temp[gi_ind,]
+#     collapse_annos<-sapply(13:20, function(k){
+#     name1<-unique(temp_gi[!is.na(temp_gi[,k]),k])
+#     annos<-paste(name1[!(name1 == "NA")], collapse=";")
+#     return(annos)
+#       })
+#     collapse_annos<-sapply(collapse_annos, function(j){
+#     annos<- j %>% str_split(";", simplify=T) %>% unique() %>% paste(collapse=";")
+#     return(annos)
+#       })
+#     collapse_annos[collapse_annos==""] <- NA
+#     temp_out<-temp_gi[1,]
+#     temp_out[1,13:20]<-collapse_annos
+#     return(temp_out)
+#       })
+#   
+#    ph <- temp2 %>% t() %>% as.data.frame()  
+#    rownames(ph)<-NULL
+#    
+#    lapply(ph$GI_NUMBER., str_split, ";", simplify=T) -> test 
+#    test_flat<-test
+#    names(test_flat)<-letters[1:length(test_flat)]
+#    #test[[which(is.na(names(test)))]]<-NULL
+#    test_flat<-unlist(test_flat)
+#   
+#    my_overs<-sapply(1:length(test), function(b){
+#         
+#     my_overs<-test_flat[(test_flat %in% test[[b]]) & !is.na(names(test)[b])]
+#     my_overs<- names(my_overs) %>% gsub("[[:digit:]]", "", .)
+#     my_overs <- unique(my_overs[my_overs !=letters[b]])
+#     my_overs <- which(letters[1:26] %in% my_overs)
+#     my_out<-list(my_overs)
+#     names(my_out)<-b
+#     return(my_out)})
+#   
+#  my_overs[lengths(my_overs)==0 ]<-NA
+#   
+#  my_overs_am<-my_overs
+#  for(d in 1:length(my_overs)){
+#   z=1    
+#   if(any(!is.na(my_overs_am[[d]]))){
+#   while(z==1){
+# 
+#     for(k in 1:length(my_overs_am[[d]])){
+#       
+#       list_ind<-my_overs_am[[d]][k]
+#       partner<-my_overs_am[[list_ind]]
+#       if(any(!is.na(partner))){
+#         my_overs_am[[d]]<-c(my_overs_am[[d]],partner)
+#         my_overs_am[[list_ind]]<-NA
+#       }}
+#     my_overs_am[[d]] <- unique(my_overs_am[[d]])
+#     if( all(is.na(my_overs_am[(my_overs_am[[d]] %>% sort() %>% .[-1])]))){
+#       z<-0
+#     }
+#     }
+#     
+#   }}
+#   
+#   
+# my_overs_am<-my_overs_am[!is.na(my_overs_am)]
+#   
+# annot<-sapply(my_overs_am, function(r){
+#   annos<-sapply(13:20, function(k){
+#   annos<-ph[r,k] %>% unlist() %>% str_split(";", simplify=T) %>% unique() %>% sort() %>% paste(collapse=";")
+#   return(annos)
+#       }) %>% as.data.frame() %>% t()
+#   return(cbind(ph[r[1],1:12],annos))
+#   })  %>% t() %>% as.data.frame()
+# 
+# if(ncol(annot)==0){
+# ph_fin<-rbind(ph_fin,ph)  
+#   
+# }else{
+# colnames(annot)<-colnames(ph)
+# new_ph<-rbind(annot, ph[(-unlist(my_overs_am)),] )
+# ph_fin<-rbind(ph_fin,new_ph)
+# }
+# 
+# 
+# print(i)
+# }
+# 
+# name_annos_allfixed<-rbind(name_annos_new[!name_annos_liufixed$Zhang_Name %in% unlist(ph_fin$Zhang_Name),],ph_fin)
+```
+
+```{r}
 
 
 
-  #   
-  # }else if(length(ind_l)==1 & length(ind_l)==1){
-  #   z<-zhang_final[ind_z,]
-  #   l<-liu_final[ind_l,]
-  #   
-  #   names_annos<-sapply(6:11, function(i){
-  #     
-  #     if(is.na(z[i+2])&is.na(l[i])){
-  #       return(NA)
-  #     }else if(is.na(z[i+2])){
-  #       return(l[i])
-  #     } else if(is.na(l[i])){
-  #        return(z[i+2])
-  #     } else if(z[i+2]==l[i]){
-  #       return(z[i+2])
-  #     }else{
-  #       return(paste(z[i+2],l[i], sep=";"))
-  #     }
-  #     
-  #     })
-  # 
-  #   names(names_annos)<-names(l)[6:11]
-  #   
-  # 
-    
-    
-  #   
-  #   }else{
-  #     
-  #   }
-  # 
-  # return(my_out)
-  # })
-  # 
+# lastly need to go trhough it again and condense anything that is appearing more than once in IDs. 
+test<-name_annos_new
+#test<-test[-635,]
+test<-cbind(1:nrow(test),test)
+test[,14] %<>% sapply(gsub, pattern="WMF_Protein ID;",replacement="")
+test[,15] %<>% sapply(gsub, pattern="WMF_Seq. Description;",replacement="")
+test[,16] %<>% sapply(gsub, pattern="WMF_GO Names list;",replacement="")
+test[,17] %<>% sapply(gsub, pattern="WMF_iBAQ LP1;",replacement="")
+test[,18] %<>% sapply(gsub, pattern="WMF_iBAQ LP2;;",replacement="")
+test[,19] %<>% sapply(gsub, pattern="WMF_iBAQ LP3;",replacement="")
+
+
+exclude<-1
+IDs<- test[,c(1,14:19)] %>% apply(1, str_split, pattern=";")
+# IDs<-IDs %>% lapply(function(x){
+#   sapply(x, function(y){
+#     return(y[!grepl("WMF_",y)])
+#     },simplify = T)
+# })
+final_out<-rep(0,18)
+names(final_out)<-colnames(test)[2:19]
+
+for(i in 1:nrow(test)){
+    print(i)
+# for(i in 1:9){
+#   i=10
+
+if(!(i %in% exclude) | i==1){
+exclude<-c(exclude , i)
+  if(!is.null(unlist(name_annos_allfixed[i,7]))){
+IDs_temp<-IDs[[i]]
+IDs_excl<-IDs[-(exclude)]
+IDs_temp[is.na(IDs_temp)]<-"THISISNA"
   
+mymatches<-lapply(1:6,function(x, IDs_excl){
+(IDs_excl %>% lapply(function(y){y[x]})) %>% 
+    lapply(function(z){
+      unlist(z)  %in%  unlist(IDs_temp[x])
+      })
+},IDs_excl=IDs_excl)
+
+if( any(unlist(mymatches))){
+  my_out<-IDs[[i]][2:7]
+  my_meta<- test[i,2:13]
+  hit<-1
+  to_add<-0
+  to_add_2<-0
+  while(hit==1){
+  
+   if( any(unlist(mymatches))){
+   hit_ind<-sapply(mymatches, function(a){
+     which(sapply(a,any))
+     })
+   
+    to_add<-unique(c(to_add,unlist(unique(hit_ind))))
+    to_add<-to_add[to_add>0]
+    to_add<-to_add[order(to_add)]
+    to_add_2<-unique(c(to_add_2,(lapply(unlist(unique(hit_ind)), function(f){return(IDs_excl[[f]][1])}) %>% unlist() %>% as.numeric())))
+    to_add_2<-to_add_2[to_add_2>0]
+    to_add_2<-to_add_2[order(to_add_2)]
+   }
+    j<-to_add[1]
+    k<-to_add_2[1]
+    
+    my_out<-lapply(1:6, function(e){
+      in1<-unlist(my_out[e])
+      in2<-unlist(IDs_excl[[j]][e+1])
+      in2 %<>% str_split('"')
+      in2 %<>% lapply(function(f){
+        splits<-grep(f, pattern="[(),]|list")
+        if(length(splits)>0){
+          return(f[-splits])
+        }else{
+          return(f)
+        }})
+      in1 %<>% str_split('"')
+      in1 %<>% lapply(function(f){
+        splits<-grep(f, pattern="[(),]|list")
+        if(length(splits)>0){
+          return(f[-splits])
+        }else{
+          return(f)
+        }}) 
+        
+      temp<-unique(c(unlist(in1),unlist(in2)))
+      if (length(temp)>1){
+        temp<-na.omit(temp)
+        if (length(temp)>0){
+      return(temp)
+        }else{
+          temp<-NA
+          return(temp)
+        }
+      }else{
+        if (length(temp)>0){
+      return(temp)
+        }else{
+          temp<-NA
+          return(temp)
+        }
+      }  
+    })
+    
+    meta_temp<-test[,2:13][k,]
+    
+    meta_temp1<-sapply(1:4, function(f){
+        return(paste0(unique(c(unlist(my_meta)[f], unlist(meta_temp)[f])), collapse=";"))
+      })
+    meta_temp2<-ceiling((as.numeric(unlist(meta_temp[,5:12])) + as.numeric((unlist(my_meta[,5:12]))))/2)
+    
+    my_meta<- as.data.frame(c(meta_temp1,meta_temp2)) %>% t()
+    exclude<-c(exclude , k)
+    IDs_temp<-IDs[[k]]
+    IDs_excl<-IDs[-(exclude)]
+    IDs_temp[is.na(IDs_temp)]<-"THISISNA"
+  
+    mymatches<-lapply(1:6,function(x, IDs_excl){
+      (IDs_excl %>% lapply(function(y){y[x]})) %>% 
+      lapply(function(z){
+        unlist(z)  %in%  unlist(IDs_temp[x])
+      })
+    },IDs_excl=IDs_excl)
+    
+   to_add<-to_add[-(1)]
+   to_add<-to_add-1
+   to_add_2<-to_add_2[-(1)]
+   if(length(to_add)==0 & !any(unlist(mymatches))){
+   hit<-0
+   }}
+   out_line<-c(unlist(lapply(my_meta, paste, collapse=";")),unlist(lapply(my_out, paste, collapse=";")))
+   names(out_line)<-colnames(test)[2:19]
+   final_out<-rbind(final_out, out_line)
+
+  
+  
+  }else{
+  out_line<-test[i,2:19]
+  names(out_line)<-colnames(test)[2:19]
+  final_out<-rbind(final_out, out_line)
+
+}}}}
+
+final_out<-final_out[-1,]
+```
+
+
+
+
+
+
+```{r}
+
+overlaps<-final_out[,5:12]
+  
+overlaps[]<-lapply(final_out[,5:12], function(x) as.numeric(as.character(x)))
+
+
+
+upset(overlaps, nsets = 8)
+upset(overlaps[,1:5], nsets = 5)
+upset(overlaps[,6:8], nsets = 3)
+
+
+overlaps<-name_annos_new[,5:12]
+  
+overlaps[]<-lapply(name_annos_new[,5:12], function(x) as.numeric(as.character(x)))
+upset(overlaps, nsets = 8)
+upset(overlaps[,1:5], nsets = 5)
+upset(overlaps[,6:8], nsets = 3)
+
 
 ```
 
 
+
+```{r}
+
+hits <- read.csv("../20201201_OS_eggnog/")
+
+then look for enrichment
+
+```
 
 
 ````{r}
